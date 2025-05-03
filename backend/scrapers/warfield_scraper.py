@@ -1,8 +1,6 @@
-from .base_scraper import BaseScraper
-from bs4 import BeautifulSoup
 from datetime import datetime
-import re
 from typing import List, Dict
+from .base_scraper import BaseScraper
 
 class WarfieldScraper(BaseScraper):
     def __init__(self):
@@ -11,150 +9,75 @@ class WarfieldScraper(BaseScraper):
             base_url="https://www.thewarfieldtheatre.com/events"
         )
 
+    def get_events(self) -> List[Dict]:
+        """Get all events from The Warfield."""
+        soup = self.fetch_page()
+        if not soup:
+            return []
+            
+        return self.extract_events(soup)
+
     def parse_date(self, date_str: str) -> datetime:
-        """Parse Warfield's date format."""
+        """Parse Warfield date string into datetime object.
+        Format example: 'Sat, May 3, 2025'"""
         try:
-            # Remove any extra whitespace and normalize the string
+            # Clean up the date string by removing extra whitespace
             date_str = ' '.join(date_str.split())
-            # Try to extract the date part
-            match = re.search(r'([A-Za-z]+, [A-Za-z]+ \d+, \d{4})', date_str)
-            if match:
-                date_str = match.group(1)
-            
-            # Map of abbreviated month names to full month names
-            month_map = {
-                'Jan': 'January',
-                'Feb': 'February',
-                'Mar': 'March',
-                'Apr': 'April',
-                'May': 'May',
-                'Jun': 'June',
-                'Jul': 'July',
-                'Aug': 'August',
-                'Sep': 'September',
-                'Oct': 'October',
-                'Nov': 'November',
-                'Dec': 'December'
-            }
-            
-            # Replace abbreviated month names with full names
-            for abbr, full in month_map.items():
-                date_str = date_str.replace(f', {abbr} ', f', {full} ')
-            
-            # Try parsing with the new format first (e.g., "Sat, May 3, 2025")
-            try:
-                return datetime.strptime(date_str, "%a, %B %d, %Y")
-            except ValueError:
-                # Fall back to the old format (e.g., "Saturday, May 3, 2025")
-                return datetime.strptime(date_str, "%A, %B %d, %Y")
-        except Exception as e:
-            print(f"Error parsing date {date_str}: {str(e)}")
+            return datetime.strptime(date_str, '%a, %b %d, %Y')
+        except ValueError:
+            self.logger.error(f"Error parsing date: {date_str}")
             return None
 
-    async def get_events(self) -> List[Dict]:
-        """Get all events from The Warfield."""
-        try:
-            events = []
-            soup = await self.fetch_page()
-            if soup:
-                events = self.extract_events(soup)
-                print(f"Found {len(events)} events")
-            return events
-        except Exception as e:
-            print(f"Error getting events: {str(e)}")
-            return []
-
-    def extract_events(self, soup: BeautifulSoup) -> List[Dict]:
-        """Extract events from the BeautifulSoup object."""
+    def extract_events(self, soup) -> List[Dict]:
+        """Extract events from The Warfield's events page."""
         events = []
         
-        # Try different possible selectors for event containers
-        selectors = [
-            'div.event-item',
-            'div.event',
-            'div.event-container',
-            'div.entry',
-            'div.carousel_item'
-        ]
+        # Find all event elements
+        event_elements = soup.select('div.entry.warfield')
         
-        for selector in selectors:
-            event_elements = soup.select(selector)
-            if event_elements:
-                break
+        if not event_elements:
+            self.logger.error("No event elements found")
+            return events
         
         for element in event_elements:
             try:
-                # Try different possible selectors for title
-                title_elem = (
-                    element.find('h3') or
-                    element.find('h2') or
-                    element.find('div', class_='event-title') or
-                    element.find('div', class_='carousel_item_title_small')
-                )
-                if not title_elem:
+                # Extract event ID from the detail link
+                detail_link = element.select_one('a[href*="/events/detail/"]')
+                if not detail_link:
                     continue
                     
-                title = title_elem.text.strip()
+                event_id = detail_link['href'].split('/')[-1]
                 
-                # Try different possible selectors for date
-                date_elem = (
-                    element.find('div', class_='date') or
-                    element.find('div', class_='event-date') or
-                    element.find('span', class_='date') or
-                    element.find('span', class_='carousel_item_date')
-                )
-                if not date_elem:
+                # Extract title
+                title = element.select_one('h3.carousel_item_title_small a')
+                if not title:
+                    continue
+                title = title.text.strip()
+                
+                # Extract date and time
+                date_time = element.select_one('h5')
+                if not date_time:
                     continue
                     
-                date_str = date_elem.text.strip()
-                start_time = self.parse_date(date_str)
-                if not start_time:
+                date_str = date_time.text.strip()
+                event_date = self.parse_date(date_str)
+                if not event_date:
                     continue
                 
-                # Set end time to same day at 11:59 PM
-                end_time = start_time.replace(hour=23, minute=59)
+                # Extract ticket link
+                ticket_link = element.select_one('a[href*="axs.com"]')
+                ticket_url = ticket_link['href'] if ticket_link else None
                 
-                # Try different possible selectors for URL
-                url_elem = element.find('a')
-                if not url_elem or 'href' not in url_elem.attrs:
-                    continue
-                    
-                url = url_elem['href']
-                if not url.startswith('http'):
-                    url = f"https://www.thewarfieldtheatre.com{url}"
-                
-                # Try different possible selectors for description
-                desc_elem = (
-                    element.find('div', class_='description') or
-                    element.find('div', class_='event-description') or
-                    element.find('p') or
-                    element.find('div', class_='carousel_item_description')
-                )
-                description = desc_elem.text.strip() if desc_elem else ""
-                
-                # Try different possible selectors for image
-                img = (
-                    element.find('img') or
-                    element.find('div', class_='event-image') or
-                    element.find('div', class_='carousel_item_image')
-                )
-                image_url = None
-                if img and 'src' in img.attrs:
-                    image_url = img['src']
-                    if not image_url.startswith('http'):
-                        image_url = f"https://www.thewarfieldtheatre.com{image_url}"
-                
-                event = {
+                events.append({
+                    'event_id': event_id,
                     'title': title,
-                    'description': description,
-                    'venue': self.venue_name,
-                    'start_time': start_time,
-                    'end_time': end_time,
-                    'url': url,
-                    'image_url': image_url
-                }
-                events.append(event)
-            except Exception:
+                    'date': event_date,
+                    'ticket_url': ticket_url,
+                    'venue': self.venue_name
+                })
+                
+            except Exception as e:
+                self.logger.error(f"Error extracting event: {str(e)}")
                 continue
                 
-        return events 
+        return events

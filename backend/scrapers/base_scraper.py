@@ -1,71 +1,30 @@
 from bs4 import BeautifulSoup
-from playwright.async_api import async_playwright
-import asyncio
+import requests
 from datetime import datetime
 from typing import List, Dict, Optional
 import logging
-import subprocess
 
 class BaseScraper:
     def __init__(self, venue_name: str, base_url: str):
         self.venue_name = venue_name
         self.base_url = base_url
-        self.logger = logging.getLogger(__name__)
-        self.playwright = None
-        self.browser = None
-        self.context = None
+        self.logger = logging.getLogger(f"{self.__class__.__name__}")
 
-    async def ensure_browser_installed(self):
-        """Ensure the browser is installed, install if not."""
+    def fetch_page(self) -> Optional[BeautifulSoup]:
+        """Fetch and parse the events page."""
         try:
-            from playwright.async_api import async_playwright
-            playwright = await async_playwright().start()
-            await playwright.chromium.launch(headless=True)
-            await playwright.stop()
-        except Exception:
-            print("Browser not found, installing...")
-            subprocess.run(["python", "-m", "playwright", "install", "chromium"], check=True)
-            print("Browser installed successfully")
-
-    async def fetch_page(self, url: str = None) -> Optional[BeautifulSoup]:
-        """Fetch and parse a webpage using Playwright."""
-        if url is None:
-            url = self.base_url
-            
-        try:
-            # Ensure browser is installed
-            await self.ensure_browser_installed()
-            
-            # Initialize Playwright
-            self.playwright = await async_playwright().start()
-            self.browser = await self.playwright.chromium.launch(headless=True)
-            self.context = await self.browser.new_context()
-            
-            page = await self.context.new_page()
-            await page.goto(url, wait_until="networkidle")
-            await page.wait_for_timeout(2000)
-            content = await page.content()
-            await page.close()
-            
-            return BeautifulSoup(content, 'html.parser')
+            self.logger.debug(f"Fetching page: {self.base_url}")
+            response = requests.get(self.base_url)
+            response.raise_for_status()
+            self.logger.debug(f"Response status: {response.status_code}")
+            return BeautifulSoup(response.text, 'html.parser')
         except Exception as e:
-            print(f"Error fetching {url}: {str(e)}")
+            self.logger.error(f"Error fetching page: {str(e)}")
             return None
-        finally:
-            await self.cleanup()
 
-    async def cleanup(self):
-        """Clean up browser resources."""
-        if self.context:
-            await self.context.close()
-        if self.browser:
-            await self.browser.close()
-        if self.playwright:
-            await self.playwright.stop()
-
-    async def get_events(self) -> List[Dict]:
-        """Get all events from the venue."""
-        raise NotImplementedError("Subclasses must implement get_events")
+    def get_events(self) -> List[Dict]:
+        """Get all events from the venue. To be implemented by subclasses."""
+        raise NotImplementedError
 
     def parse_date(self, date_str: str) -> datetime:
         """Parse a date string into a datetime object."""
@@ -74,4 +33,4 @@ class BaseScraper:
     def extract_events(self, soup: BeautifulSoup) -> List[Dict]:
         """Extract events from parsed HTML.
         To be implemented by venue-specific scrapers."""
-        raise NotImplementedError 
+        raise NotImplementedError

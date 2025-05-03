@@ -18,7 +18,8 @@ app.add_middleware(
         "http://localhost:3000",
         "http://localhost:8000",
         "https://calendar-frontend.onrender.com",
-        "https://calendar-backend.onrender.com"
+        "https://calendar-backend.onrender.com",
+        "https://calendar-frontend-ybqa.onrender.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],

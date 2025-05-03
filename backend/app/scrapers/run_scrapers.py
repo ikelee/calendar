@@ -1,6 +1,6 @@
 from typing import List
 from .warfield import WarfieldScraper
-from ..database import SessionLocal
+from ..core.database import SessionLocal
 from ..models.event import Event
 
 def run_scrapers() -> List[dict]:

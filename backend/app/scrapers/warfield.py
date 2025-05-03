@@ -19,9 +19,11 @@ class WarfieldScraper(BaseScraper):
 
     def parse_date(self, date_str: str) -> datetime:
         """Parse Warfield date string into datetime object.
-        Format example: 'Sat, May 3, 2025 8:00 PM'"""
+        Format example: 'Sat, May 3, 2025'"""
         try:
-            return datetime.strptime(date_str, '%a, %b %d, %Y %I:%M %p')
+            # Clean up the date string by removing extra whitespace
+            date_str = ' '.join(date_str.split())
+            return datetime.strptime(date_str, '%a, %b %d, %Y')
         except ValueError:
             self.logger.error(f"Error parsing date: {date_str}")
             return None
@@ -31,22 +33,29 @@ class WarfieldScraper(BaseScraper):
         events = []
         
         # Find all event elements
-        event_elements = soup.select('.event-item')
+        event_elements = soup.select('div.entry.warfield')
+        
+        if not event_elements:
+            self.logger.error("No event elements found")
+            return events
         
         for element in event_elements:
             try:
                 # Extract event ID from the detail link
-                detail_link = element.select_one('a.event-detail-link')
+                detail_link = element.select_one('a[href*="/events/detail/"]')
                 if not detail_link:
                     continue
                     
                 event_id = detail_link['href'].split('/')[-1]
                 
                 # Extract title
-                title = element.select_one('.event-title').text.strip()
+                title = element.select_one('h3.carousel_item_title_small a')
+                if not title:
+                    continue
+                title = title.text.strip()
                 
                 # Extract date and time
-                date_time = element.select_one('.event-date-time')
+                date_time = element.select_one('h5')
                 if not date_time:
                     continue
                     
@@ -56,7 +65,7 @@ class WarfieldScraper(BaseScraper):
                     continue
                 
                 # Extract ticket link
-                ticket_link = element.select_one('a.ticket-link')
+                ticket_link = element.select_one('a[href*="axs.com"]')
                 ticket_url = ticket_link['href'] if ticket_link else None
                 
                 events.append({

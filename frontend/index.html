@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Calendar</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .event {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .event h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>Event Calendar</h1>
+    <div id="events"></div>
+
+    <script>
+        // Get the backend URL based on the environment
+        const BACKEND_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:8000'
+            : 'https://calendar-backend.onrender.com';
+
+        async function fetchEvents() {
+            const eventsDiv = document.getElementById('events');
+            eventsDiv.innerHTML = '<div class="loading">Loading events...</div>';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/events/`);
+                const events = await response.json();
+                
+                if (events.length === 0) {
+                    eventsDiv.innerHTML = '<p>No events found.</p>';
+                    return;
+                }
+
+                eventsDiv.innerHTML = events.map(event => `
+                    <div class="event">
+                        <h3>${event.title}</h3>
+                        <p><strong>Venue:</strong> ${event.venue}</p>
+                        <p><strong>Time:</strong> ${new Date(event.start_time).toLocaleString()}</p>
+                        <p>${event.description}</p>
+                        <a href="${event.url}" target="_blank">More Info →</a>
+                    </div>
+                `).join('');
+            } catch (error) {
+                eventsDiv.innerHTML = '<p>Error loading events. Please try again later.</p>';
+                console.error('Error:', error);
+            }
+        }
+
+        // Fetch events when the page loads
+        fetchEvents();
+    </script>
+</body>
+</html> 

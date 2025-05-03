@@ -1,0 +1,21 @@
+services:
+  # Backend API service
+  - type: web
+    name: calendar-backend
+    env: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+
+  # Frontend static site
+  - type: web
+    name: calendar-frontend
+    env: static
+    buildCommand: echo "Static site, no build needed"
+    staticPublishPath: ./frontend
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html 

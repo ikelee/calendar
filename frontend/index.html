@@ -3,75 +3,268 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event Calendar</title>
+    <title>SF Event Calendar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary-color: #2563eb;
+            --text-color: #1f2937;
+            --text-secondary: #6b7280;
+            --background: #f9fafb;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background);
+            color: var(--text-color);
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
+            padding: 2rem 1rem;
         }
-        .event {
-            border: 1px solid #ddd;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 5px;
-            background-color: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .event h3 {
-            margin-top: 0;
-            color: #2c3e50;
-        }
-        .loading {
+
+        header {
             text-align: center;
-            padding: 20px;
-            color: #666;
+            margin-bottom: 3rem;
         }
-        a {
-            color: #3498db;
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .events-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .event-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .event-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .event-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .event-content {
+            padding: 1.5rem;
+        }
+
+        .event-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--text-color);
+        }
+
+        .event-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+
+        .event-venue {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: #f3f4f6;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .event-description {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .event-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--primary-color);
+            font-weight: 500;
             text-decoration: none;
+            transition: color 0.2s ease;
         }
-        a:hover {
-            text-decoration: underline;
+
+        .event-link:hover {
+            color: #1d4ed8;
+        }
+
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+            gap: 1rem;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            text-align: center;
+            padding: 2rem;
+            color: #dc2626;
+            background: #fee2e2;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 1.5rem 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .events-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>Event Calendar</h1>
-    <div id="events"></div>
+    <div class="container">
+        <header>
+            <h1>SF Event Calendar</h1>
+            <p class="subtitle">Discover upcoming events in San Francisco</p>
+        </header>
+
+        <div id="events">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>Loading events...</p>
+            </div>
+        </div>
+    </div>
 
     <script>
-        // Get the backend URL from environment variable or use localhost
         const BACKEND_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:8000'
-            : 'https://calendar-backend.onrender.com';  // Replace with your actual Render backend URL
+            : 'https://calendar-backend.onrender.com';
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return new Intl.DateTimeFormat('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: 'numeric'
+            }).format(date);
+        }
 
         async function fetchEvents() {
             const eventsDiv = document.getElementById('events');
-            eventsDiv.innerHTML = '<div class="loading">Loading events...</div>';
             
             try {
                 const response = await fetch(`${BACKEND_URL}/events/`);
                 const events = await response.json();
                 
                 if (events.length === 0) {
-                    eventsDiv.innerHTML = '<p>No events found.</p>';
+                    eventsDiv.innerHTML = `
+                        <div class="empty-state">
+                            <p>No events found. Check back later!</p>
+                        </div>
+                    `;
                     return;
                 }
 
-                eventsDiv.innerHTML = events.map(event => `
-                    <div class="event">
-                        <h3>${event.title}</h3>
-                        <p><strong>Venue:</strong> ${event.venue}</p>
-                        <p><strong>Time:</strong> ${new Date(event.start_time).toLocaleString()}</p>
-                        <p>${event.description}</p>
-                        <a href="${event.url}" target="_blank">More Info →</a>
+                eventsDiv.innerHTML = `
+                    <div class="events-grid">
+                        ${events.map(event => `
+                            <div class="event-card">
+                                ${event.image_url ? `
+                                    <img src="${event.image_url}" alt="${event.title}" class="event-image">
+                                ` : ''}
+                                <div class="event-content">
+                                    <h3 class="event-title">${event.title}</h3>
+                                    <div class="event-meta">
+                                        <span class="event-venue">${event.venue}</span>
+                                        <span>•</span>
+                                        <span>${formatDate(event.start_time)}</span>
+                                    </div>
+                                    ${event.description ? `
+                                        <p class="event-description">${event.description}</p>
+                                    ` : ''}
+                                    <a href="${event.url}" target="_blank" class="event-link">
+                                        Get Tickets
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                                        </svg>
+                                    </a>
+                                </div>
+                            </div>
+                        `).join('')}
                     </div>
-                `).join('');
+                `;
             } catch (error) {
-                eventsDiv.innerHTML = '<p>Error loading events. Please try again later.</p>';
+                eventsDiv.innerHTML = `
+                    <div class="error-message">
+                        <p>Error loading events. Please try again later.</p>
+                    </div>
+                `;
                 console.error('Error:', error);
             }
         }

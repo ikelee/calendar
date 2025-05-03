@@ -1,10 +1,10 @@
 from bs4 import BeautifulSoup
-import requests
+from playwright.async_api import async_playwright
+import asyncio
 from datetime import datetime
 from typing import List, Dict, Optional
 import logging
-from playwright.async_api import async_playwright
-import time
+import subprocess
 
 class BaseScraper:
     def __init__(self, venue_name: str, base_url: str):
@@ -15,12 +15,27 @@ class BaseScraper:
         self.browser = None
         self.context = None
 
+    async def ensure_browser_installed(self):
+        """Ensure the browser is installed, install if not."""
+        try:
+            from playwright.async_api import async_playwright
+            playwright = await async_playwright().start()
+            await playwright.chromium.launch(headless=True)
+            await playwright.stop()
+        except Exception:
+            print("Browser not found, installing...")
+            subprocess.run(["python", "-m", "playwright", "install", "chromium"], check=True)
+            print("Browser installed successfully")
+
     async def fetch_page(self, url: str = None) -> Optional[BeautifulSoup]:
         """Fetch and parse a webpage using Playwright."""
         if url is None:
             url = self.base_url
             
         try:
+            # Ensure browser is installed
+            await self.ensure_browser_installed()
+            
             # Initialize Playwright
             self.playwright = await async_playwright().start()
             self.browser = await self.playwright.chromium.launch(headless=True)
@@ -59,9 +74,4 @@ class BaseScraper:
     def extract_events(self, soup: BeautifulSoup) -> List[Dict]:
         """Extract events from parsed HTML.
         To be implemented by venue-specific scrapers."""
-        raise NotImplementedError
-
-    def setup_browser(self):
-        """Set up the Playwright browser."""
-        # This method is no longer used with the new async fetch_page method
-        pass 
+        raise NotImplementedError 

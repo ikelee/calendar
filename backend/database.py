@@ -7,17 +7,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Get database URL from environment variable, fallback to SQLite for local development
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./events.db")
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./events.db")
 
-# Handle SQLite vs PostgreSQL connection strings
-if DATABASE_URL.startswith("postgres"):
-    engine = create_engine(DATABASE_URL)
-else:
-    engine = create_engine(
-        DATABASE_URL, connect_args={"check_same_thread": False}
-    )
-
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

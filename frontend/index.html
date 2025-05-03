@@ -43,10 +43,10 @@
     <div id="events"></div>
 
     <script>
-        // Get the backend URL based on the environment
+        // Get the backend URL from environment variable or use localhost
         const BACKEND_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:8000'
-            : 'https://calendar-backend.onrender.com';
+            : 'https://calendar-backend.onrender.com';  // Replace with your actual Render backend URL
 
         async function fetchEvents() {
             const eventsDiv = document.getElementById('events');

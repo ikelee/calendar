@@ -6,6 +6,8 @@ from datetime import datetime
 import models
 import database
 from pydantic import BaseModel
+from scrapers.run_scrapers import run_scrapers
+import logging
 
 app = FastAPI()
 
@@ -67,6 +69,20 @@ def get_event(event_id: int, db: Session = Depends(database.get_db)):
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
     return event
+
+@app.get("/")
+async def root():
+    return {"message": "Calendar API"}
+
+@app.post("/trigger-scraper")
+async def trigger_scraper():
+    try:
+        logging.info("Triggering scraper via API")
+        run_scrapers()
+        return {"message": "Scraper ran successfully"}
+    except Exception as e:
+        logging.error(f"Error running scraper: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

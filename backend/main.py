@@ -76,12 +76,25 @@ async def root():
 
 @app.post("/trigger-scraper")
 async def trigger_scraper():
+    """Trigger the scraper to fetch new events."""
     try:
-        logging.info("Triggering scraper via API")
-        run_scrapers()
-        return {"message": "Scraper ran successfully"}
+        events = await run_scrapers()
+        return {"status": "success", "events_retrieved": len(events)}
     except Exception as e:
-        logging.error(f"Error running scraper: {str(e)}")
+        print(f"Error running scraper: {str(e)}")
+        return {"status": "error", "message": str(e)}
+
+@app.post("/purge-db")
+async def purge_database(db: Session = Depends(database.get_db)):
+    """Purge all events from the database (for testing only)."""
+    try:
+        # Delete all events
+        num_deleted = db.query(models.Event).delete()
+        db.commit()
+        return {"message": f"Successfully deleted {num_deleted} events"}
+    except Exception as e:
+        db.rollback()
+        logging.error(f"Error purging database: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

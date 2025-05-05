@@ -1,17 +1,1 @@
-name: Trigger Scraper
 
-on:
-  schedule:
-    - cron: '0 * * * *'  # Run at the start of every hour
-  workflow_dispatch:  # Allow manual triggering
-
-jobs:
-  trigger:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Trigger scraper
-      run: |
-        curl -X POST ${{ secrets.API_URL }}/trigger-scraper
-      env:
-        API_URL: ${{ secrets.API_URL }} 
